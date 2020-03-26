@@ -37,7 +37,7 @@ func NewProcess(
 	audio bool,
 	loggingOpts ProcessLoggingOpts,
 ) *Process {
-	return &Process{audio, keepFiles, loggingOpts}
+	return &Process{keepFiles, audio, loggingOpts}
 }
 
 // getHLSFlags are for getting the flags based on the config context
