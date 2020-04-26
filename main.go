@@ -59,7 +59,7 @@ func NewStream(
 		logrus.Error(err)
 		return nil, ""
 	}
-	process := NewProcess(keepFiles, audio, loggingOpts)
+	process := NewProcess(keepFiles, audio)
 	cmd := process.Spawn(path, URI)
 
 	// Create nil pointer in case logging is not enabled
