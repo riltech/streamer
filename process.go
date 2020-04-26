@@ -23,9 +23,8 @@ type ProcessLoggingOpts struct {
 
 // Process is the main type for creating new processes
 type Process struct {
-	keepFiles   bool
-	audio       bool
-	loggingOpts ProcessLoggingOpts
+	keepFiles bool
+	audio     bool
 }
 
 // Type check
@@ -35,9 +34,8 @@ var _ IProcess = (*Process)(nil)
 func NewProcess(
 	keepFiles bool,
 	audio bool,
-	loggingOpts ProcessLoggingOpts,
 ) *Process {
-	return &Process{keepFiles, audio, loggingOpts}
+	return &Process{keepFiles, audio}
 }
 
 // getHLSFlags are for getting the flags based on the config context
