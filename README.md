@@ -39,7 +39,7 @@ func main() {
 			MaxSize:    500, // Maximum size of a log in megabytes
 		},
 		25*time.Second, // Time to wait before declaring a stream start failed
-		errorHandler, // Invoked once the processes exits with an error
+		errorHandler, // Invoked once the processes exits with an error. Can be nil
   )
   
   // Returns a waitGroup where the stream checking the underlying process for a successful start

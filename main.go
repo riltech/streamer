@@ -116,7 +116,9 @@ func (strm *Stream) Start() *sync.WaitGroup {
 	go func() {
 		logrus.Debugf("%s is starting FFMPEG process | Stream", strm.ID)
 		if err := strm.CMD.Run(); err != nil {
-			strm.errorHandler(err, strm.ID)
+			if strm.errorHandler != nil {
+				strm.errorHandler(err, strm.ID)
+			}
 			once.Do(func() {
 				logrus.Errorf("%s process could not start. | Stream\n Error: %s",
 					strm.ID,
