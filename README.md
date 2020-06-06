@@ -16,8 +16,13 @@ It provides a handy interface to handle streams
 
 # Example usage
 
+#### Start a simple stream
 ```go
 import "github.com/riltech/streamer"
+
+func errorHandler(err error, id string) {
+	fmt.Printf("Error with %s stream: %s", id, err)
+}
 
 func main() {
 	stream, id := streamer.NewStream(
@@ -34,8 +39,48 @@ func main() {
 			MaxSize:    500, // Maximum size of a log in megabytes
 		},
 		25*time.Second, // Time to wait before declaring a stream start failed
+		errorHandler, // Invoked once the processes exits with an error
   )
   
+  // Returns a waitGroup where the stream checking the underlying process for a successful start
+  stream.Start().Wait() 
+}
+```
+
+#### Restart a stream on error
+```go
+import "github.com/riltech/streamer"
+
+func main() {
+	streams := map[string]streamer.IStream
+
+	errorHandler := func (err error, id string) {
+		stream, ok := streams[id]
+		if !ok {
+			fmt.Errorf("%s stream not found", id)
+			return
+		}
+		stream.Restart().Wait()
+	}
+
+	stream, id := streamer.NewStream(
+		"rtsp://admin:password@host.dyndns.org:447/Streaming/Channel/2", // URI of raw RTSP stream
+		"./videos", // Directory where to store video chunks and indexes. Should exist already
+		true, // Indicates if stream should be keeping files after it is stopped or clean the directory
+		true, // Indicates if Audio should be enabled or not
+		streamer.ProcessLoggingOpts{
+			Enabled:    true, // Indicates if process logging is enabled
+			Compress:   true, // Indicates if logs should be compressed
+			Directory:  "/tmp/logs/stream", // Directory to store logs
+			MaxAge:     0, // Max age for a log. 0 is infinite
+			MaxBackups: 2, // Maximum backups to keep
+			MaxSize:    500, // Maximum size of a log in megabytes
+		},
+		25*time.Second, // Time to wait before declaring a stream start failed
+		errorHandler, // Invoked once the processes exits with an error
+  )
+
+	streams[id] = stream
   // Returns a waitGroup where the stream checking the underlying process for a successful start
   stream.Start().Wait() 
 }
