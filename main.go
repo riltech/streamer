@@ -25,19 +25,20 @@ type IStream interface {
 
 // Stream describes a given host's streaming
 type Stream struct {
-	ID          string               `json:"id"`
-	Path        string               `json:"path"`
-	Running     bool                 `json:"running"`
-	CMD         *exec.Cmd            `json:"-"`
-	Process     IProcess             `json:"-"`
-	Mux         *sync.Mutex          `json:"-"`
-	Streak      *hotstreak.Hotstreak `json:"-"`
-	OriginalURI string               `json:"-"`
-	StorePath   string               `json:"-"`
-	KeepFiles   bool                 `json:"-"`
-	LoggingOpts *ProcessLoggingOpts  `json:"-"`
-	Logger      *lumberjack.Logger   `json:"-"`
-	WaitTimeOut time.Duration        `json:"-"`
+	ID           string               `json:"id"`
+	Path         string               `json:"path"`
+	Running      bool                 `json:"running"`
+	CMD          *exec.Cmd            `json:"-"`
+	Process      IProcess             `json:"-"`
+	Mux          *sync.Mutex          `json:"-"`
+	Streak       *hotstreak.Hotstreak `json:"-"`
+	OriginalURI  string               `json:"-"`
+	StorePath    string               `json:"-"`
+	KeepFiles    bool                 `json:"-"`
+	LoggingOpts  *ProcessLoggingOpts  `json:"-"`
+	Logger       *lumberjack.Logger   `json:"-"`
+	WaitTimeOut  time.Duration        `json:"-"`
+	errorHandler func(err error, id string)
 }
 
 // Type check
@@ -51,6 +52,7 @@ func NewStream(
 	audio bool,
 	loggingOpts ProcessLoggingOpts,
 	waitTimeOut time.Duration,
+	errorHandler func(err error, id string),
 ) (*Stream, string) {
 	id := uuid.New().String()
 	path := fmt.Sprintf("%s/%s", storingDirectory, id)
@@ -88,12 +90,13 @@ func NewStream(
 			HotWait:    time.Minute * 2,
 			ActiveWait: time.Minute * 4,
 		}).Activate(),
-		OriginalURI: URI,
-		KeepFiles:   keepFiles,
-		LoggingOpts: &loggingOpts,
-		Logger:      cmdLogger,
-		Running:     false,
-		WaitTimeOut: waitTimeOut,
+		OriginalURI:  URI,
+		KeepFiles:    keepFiles,
+		LoggingOpts:  &loggingOpts,
+		Logger:       cmdLogger,
+		Running:      false,
+		WaitTimeOut:  waitTimeOut,
+		errorHandler: errorHandler,
 	}
 	logrus.Debugf("%s store path created | Stream", stream.StorePath)
 	return &stream, id
@@ -113,12 +116,15 @@ func (strm *Stream) Start() *sync.WaitGroup {
 	go func() {
 		logrus.Debugf("%s is starting FFMPEG process | Stream", strm.ID)
 		if err := strm.CMD.Run(); err != nil {
+			strm.Running = false
+			if strm.errorHandler != nil {
+				strm.errorHandler(err, strm.ID)
+			}
 			once.Do(func() {
 				logrus.Errorf("%s process could not start. | Stream\n Error: %s",
 					strm.ID,
 					err,
 				)
-				strm.Running = false
 				strm.Mux.Unlock()
 				wg.Done()
 			})
