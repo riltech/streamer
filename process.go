@@ -57,6 +57,10 @@ func (p Process) Spawn(path, URI string) *exec.Cmd {
 		"tcp",
 		"-i",
 		URI,
+		"-f",
+		"lavfi",
+		"-i",
+		"anullsrc=channel_layout=stereo:sample_rate=44100",
 		"-vsync",
 		"0",
 		"-copyts",
@@ -65,7 +69,7 @@ func (p Process) Spawn(path, URI string) *exec.Cmd {
 		"-movflags",
 		"frag_keyframe+empty_moov",
 	}
-	if p.audio {
+	if (!p.audio) {
 		processCommands = append(processCommands, "-an")
 	}
 	processCommands = append(processCommands,
