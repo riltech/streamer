@@ -2,6 +2,7 @@ package streamer
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/natefinch/lumberjack"
-	"github.com/sirupsen/logrus"
 
 	"github.com/Roverr/hotstreak"
 )
@@ -56,7 +56,7 @@ func NewStream(
 	path := fmt.Sprintf("%s/%s", storingDirectory, id)
 	err := os.MkdirAll(path, os.ModePerm)
 	if err != nil {
-		logrus.Error(err)
+		slog.Error("error creating directory", "error", err)
 		return nil, ""
 	}
 	process := NewProcess(keepFiles, audio)
@@ -95,7 +95,7 @@ func NewStream(
 		Running:     false,
 		WaitTimeOut: waitTimeOut,
 	}
-	logrus.Debugf("%s store path created | Stream", stream.StorePath)
+	slog.Debug("stream store path created", "path", stream.StorePath)
 	return &stream, id
 }
 
@@ -111,13 +111,10 @@ func (strm *Stream) Start() *sync.WaitGroup {
 	indexPath := fmt.Sprintf("%s/index.m3u8", strm.StorePath)
 	// Run the transcoding, resolve stream if it errors out
 	go func() {
-		logrus.Debugf("%s is starting FFMPEG process | Stream", strm.ID)
+		slog.Debug("starting FFMPEG process", "id", strm.ID)
 		if err := strm.CMD.Run(); err != nil {
 			once.Do(func() {
-				logrus.Errorf("%s process could not start. | Stream\n Error: %s",
-					strm.ID,
-					err,
-				)
+				slog.Error("process could not start", "id", strm.ID, "error", err)
 				strm.Running = false
 				strm.Mux.Unlock()
 				wg.Done()
@@ -133,10 +130,7 @@ func (strm *Stream) Start() *sync.WaitGroup {
 				continue
 			}
 			once.Do(func() {
-				logrus.Debugf("%s - %s successfully started - index.m3u8 found | Stream",
-					strm.ID,
-					strm.OriginalURI,
-				)
+				slog.Debug("successfully started", "id", strm.ID, "uri", strm.OriginalURI)
 				strm.Running = true
 				strm.Mux.Unlock()
 				wg.Done()
@@ -148,10 +142,7 @@ func (strm *Stream) Start() *sync.WaitGroup {
 	go func() {
 		<-time.After(strm.WaitTimeOut)
 		once.Do(func() {
-			logrus.Errorf(
-				"%s process starting timed out | Stream",
-				strm.ID,
-			)
+			slog.Error("process starting timed out", "id", strm.ID)
 			strm.Running = false
 			strm.Mux.Unlock()
 			wg.Done()
@@ -188,9 +179,9 @@ func (strm *Stream) Stop() error {
 	strm.Running = false
 	if !strm.KeepFiles {
 		defer func() {
-			logrus.Debugf("%s directory is being removed | Stream", strm.StorePath)
+			slog.Debug("directory is being removed", "path", strm.StorePath)
 			if err := os.RemoveAll(strm.StorePath); err != nil {
-				logrus.Error(err)
+				slog.Error("error removing directory", "error", err)
 			}
 		}()
 	}
